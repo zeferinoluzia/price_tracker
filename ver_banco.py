@@ -57,7 +57,7 @@ def ver_historico():
     conexao = sqlite3.connect("prices.db")
     cursor = conexao.cursor()
 
-    # Buscar todo o histórico
+    # Buscar histórico
     cursor.execute("""
         SELECT preco, data_hora
         FROM historico_precos
@@ -91,7 +91,6 @@ def ver_historico():
         print("Nenhum histórico encontrado.")
         return
 
-    # Mostrar registros
     print()
     print(f"{'Data':<20} {'Preço':>15}")
     print("-" * 60)
@@ -103,7 +102,6 @@ def ver_historico():
             f"R$ {preco:>10.2f}"
         )
 
-    # Estatísticas
     menor_preco = estatisticas[0]
     maior_preco = estatisticas[1]
     preco_medio = estatisticas[2]
@@ -117,7 +115,6 @@ def ver_historico():
 
 def ver_produto_atual():
 
-    # Escolhe o produto UMA única vez
     produto = selecionar_produto()
 
     if produto is None:
@@ -126,7 +123,6 @@ def ver_produto_atual():
     nome = produto["nome"]
     preco_inicial = float(produto["preco_inicial"])
 
-    # Buscar último preço no banco
     conexao = sqlite3.connect("prices.db")
     cursor = conexao.cursor()
 
@@ -139,14 +135,14 @@ def ver_produto_atual():
     """, (nome,))
 
     resultado = cursor.fetchone()
-    # Buscar estatísticas do histórico
+
     cursor.execute("""
-    SELECT
-        MIN(preco),
-        MAX(preco),
-        AVG(preco)
-    FROM historico_precos
-    WHERE nome = ?
+        SELECT
+            MIN(preco),
+            MAX(preco),
+            AVG(preco)
+        FROM historico_precos
+        WHERE nome = ?
     """, (nome,))
 
     estatisticas = cursor.fetchone()
@@ -158,7 +154,6 @@ def ver_produto_atual():
     print(f"PRODUTO: {nome}")
     print("=" * 50)
 
-    # Produto ainda não foi consultado pelo bot
     if resultado is None:
 
         print("❌ Esse produto ainda não possui preço no banco.")
@@ -166,6 +161,7 @@ def ver_produto_atual():
 
     preco_atual = resultado[0]
     data_hora = resultado[1]
+
     menor_preco = estatisticas[0]
     maior_preco = estatisticas[1]
     preco_medio = estatisticas[2]
@@ -174,12 +170,12 @@ def ver_produto_atual():
     print(f"Preço inicial:   R$ {preco_inicial:.2f}")
     print(f"Preço atual:     R$ {preco_atual:.2f}")
     print(f"Última consulta: {data_hora}")
+
     print()
     print(f"Menor preço:     R$ {menor_preco:.2f}")
     print(f"Maior preço:     R$ {maior_preco:.2f}")
     print(f"Preço médio:     R$ {preco_medio:.2f}")
 
-    # Comparação
     if preco_atual < preco_inicial:
 
         queda = preco_inicial - preco_atual
@@ -204,6 +200,127 @@ def ver_produto_atual():
         print("➡️ O preço está igual ao preço inicial.")
 
 
+def adicionar_produto():
+
+    print()
+    print("=" * 50)
+    print("ADICIONAR PRODUTO")
+    print("=" * 50)
+
+    nome = input("\nNome do produto: ").strip()
+    url = input("Link da Amazon: ").strip()
+    preco_inicial = input("Preço atual: ").strip()
+
+    # Verificar se o nome está vazio
+    if not nome:
+
+        print("❌ O nome do produto não pode ficar vazio.")
+        return
+
+    # Verificar se a URL está vazia
+    if not url:
+
+        print("❌ O link não pode ficar vazio.")
+        return
+
+    # Converter preço para número
+    try:
+
+        preco_inicial = float(
+            preco_inicial.replace(",", ".")
+        )
+
+    except ValueError:
+
+        print("❌ Preço inválido.")
+        return
+
+    # Adicionar produto à lista
+    produtos.append({
+        "nome": nome,
+        "url": url,
+        "preco_inicial": f"{preco_inicial:.2f}"
+    })
+
+    # Reescrever o CSV
+    with open(
+        "products.csv",
+        "w",
+        newline="",
+        encoding="cp1252"
+    ) as arquivo:
+
+        campos = [
+            "nome",
+            "url",
+            "preco_inicial"
+        ]
+
+        escritor = csv.DictWriter(
+            arquivo,
+            fieldnames=campos
+        )
+
+        escritor.writeheader()
+        escritor.writerows(produtos)
+
+    print()
+    print(f"✅ Produto '{nome}' adicionado com sucesso!")
+
+
+def remover_produto():
+
+    produto = selecionar_produto()
+
+    if produto is None:
+        return
+
+    nome = produto["nome"]
+
+    print()
+    print(f"Produto selecionado: {nome}")
+
+    confirmacao = input(
+        "Tem certeza que deseja remover? (s/n): "
+    ).strip().lower()
+
+    if confirmacao != "s":
+
+        print("❌ Remoção cancelada.")
+        return
+
+    # Remover da lista
+    produtos.remove(produto)
+
+    # Reescrever o CSV
+    with open(
+        "products.csv",
+        "w",
+        newline="",
+        encoding="cp1252"
+    ) as arquivo:
+
+        campos = [
+            "nome",
+            "url",
+            "preco_inicial"
+        ]
+
+        escritor = csv.DictWriter(
+            arquivo,
+            fieldnames=campos
+        )
+
+        escritor.writeheader()
+        escritor.writerows(produtos)
+
+    print()
+    print(f"✅ Produto '{nome}' removido do acompanhamento.")
+
+    print()
+    print("ℹ️ O histórico de preços foi mantido no banco.")
+
+
 def main():
 
     while True:
@@ -217,6 +334,8 @@ def main():
         print("1 - Ver histórico de preços")
         print("2 - Ver produto atual")
         print("3 - Listar produtos")
+        print("4 - Adicionar produto")
+        print("5 - Remover produto")
         print("0 - Sair")
 
         escolha = input("\nDigite uma opção: ").strip()
@@ -232,6 +351,14 @@ def main():
         elif escolha == "3":
 
             listar_produtos()
+
+        elif escolha == "4":
+
+            adicionar_produto()
+
+        elif escolha == "5":
+
+            remover_produto()
 
         elif escolha == "0":
 
