@@ -1,5 +1,6 @@
 import sqlite3
 import csv
+from database import salvar_preco
 
 
 # Ler produtos do CSV
@@ -211,19 +212,19 @@ def adicionar_produto():
     url = input("Link da Amazon: ").strip()
     preco_inicial = input("Preço atual: ").strip()
 
-    # Verificar se o nome está vazio
+    # Verificar nome
     if not nome:
 
         print("❌ O nome do produto não pode ficar vazio.")
         return
 
-    # Verificar se a URL está vazia
+    # Verificar URL
     if not url:
 
         print("❌ O link não pode ficar vazio.")
         return
 
-    # Converter preço para número
+    # Converter preço
     try:
 
         preco_inicial = float(
@@ -242,7 +243,7 @@ def adicionar_produto():
         "preco_inicial": f"{preco_inicial:.2f}"
     })
 
-    # Reescrever o CSV
+    # Atualizar products.csv
     with open(
         "products.csv",
         "w",
@@ -264,8 +265,21 @@ def adicionar_produto():
         escritor.writeheader()
         escritor.writerows(produtos)
 
+    # Registrar o preço inicial no histórico
+    salvar_preco(
+        nome,
+        url,
+        preco_inicial
+    )
+
     print()
     print(f"✅ Produto '{nome}' adicionado com sucesso!")
+
+    print()
+    print(
+        f"💾 Preço inicial de R$ {preco_inicial:.2f} "
+        "registrado no histórico."
+    )
 
 
 def remover_produto():
@@ -292,7 +306,7 @@ def remover_produto():
     # Remover da lista
     produtos.remove(produto)
 
-    # Reescrever o CSV
+    # Atualizar products.csv
     with open(
         "products.csv",
         "w",
@@ -315,10 +329,15 @@ def remover_produto():
         escritor.writerows(produtos)
 
     print()
-    print(f"✅ Produto '{nome}' removido do acompanhamento.")
+    print(
+        f"✅ Produto '{nome}' removido "
+        "do acompanhamento."
+    )
 
     print()
-    print("ℹ️ O histórico de preços foi mantido no banco.")
+    print(
+        "ℹ️ O histórico de preços foi mantido no banco."
+    )
 
 
 def main():
